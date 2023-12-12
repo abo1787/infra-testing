@@ -1,0 +1,34 @@
+default:
+  services:
+    - postgres:12.2-alpine
+
+variables:
+  POSTGRES_DB: $POSTGRES_DB
+  POSTGRES_USER: $POSTGRES_USER
+  POSTGRES_PASSWORD: $POSTGRES_PASSWORD
+  POSTGRES_HOST_AUTH_METHOD: trust
+
+stages:
+  - test
+
+image: gradle:jdk11
+
+before_script:
+  - export GRADLE_USER_HOME=`pwd`/gradle
+  - export POSTGRES_HOST=postgres
+
+test:
+  stage: test
+  script:
+    - ./gradlew flywayMigrate
+    - ./gradlew test jacocoTestReport
+    - cat build/reports/jacoco/test/html/index.html | grep -o 'Total[^%]*%'
+  coverage: /Total.*?([0-9]{1,3})%/
+  artifacts:
+    when: always
+    paths:
+      - build/reports/jacoco/test/html/
+      - build/reports/jacoco/test/
+      - build/jacoco/*.exec
+    reports:
+      junit: $CI_PROJECT_DIR/build/test-results/test/**/TEST-*.xml
